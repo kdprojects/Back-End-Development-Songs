@@ -48,6 +48,57 @@ db.songs.insert_many(songs_list)
 def parse_json(data):
     return json.loads(json_util.dumps(data))
 
+def rewrite_oid(cursorList):
+    cursorList['$id'] = cursorList['id']
+    del cursorList['_id']
+    return cursorList
+
 ######################################################################
 # INSERT CODE HERE
 ######################################################################
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify(dict(status="OK")), 200
+
+@app.route("/count", methods=['GET'])
+def count():
+    """return length of data"""
+    song_count = db.songs.count_documents({})
+    if song_count:
+        return jsonify(length=song_count), 200
+
+    return {"message": "Internal server error"}, 500
+
+@app.route('/song', methods=['GET'])
+def songs():
+    songs = []
+    for s in db.songs.find({}):
+        # print(s)
+        rewrite_oid(s)
+        # print(s)
+        songs.append(s)
+
+    if songs:
+        print(songs)
+        return jsonify({"songs":songs}), 200
+
+@app.route('/song/<int:id>', methods=['GET'])
+def get_song_by_id(id):
+    song = db.songs.find_one({"id": id})
+
+    if song:
+        rewrite_oid(song)
+        return jsonify(song), 200
+
+    return {"message": "song with id not found"}, 404
+
+@app.route('/song', methods=['POST'])
+def create_song():
+    song = parse_json(request.get_json())
+
+    if song:
+        s = db.songs.insert_one(song)
+        
+        return jsonify({"inserted_id": {"$oid": s['_oid']}}), 201
+
+    return {"Message": "song with id {song['id']} already present"}, 302
