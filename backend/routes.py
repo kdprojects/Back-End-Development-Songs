@@ -101,8 +101,24 @@ def update_song(id):
         print(song)
         s = db.songs.update_one(song, {"$set": update})
         # song.save()
-        print(s)
-        return jsonify({"inserted_id": {"$oid": str(s)}}), 201
+        if s.matched_count != s.modified_count or s.modified_count == None:
+            print(s.matched_count)
+            print(s.raw_result)
+            print(s.modified_count)
+            return {"message":"song found, but nothing updated"}, 200
+
+        print(s.raw_result)
+        return jsonify({"inserted_id": {"$oid": str(song['_id'])}}), 201
+
+    return {"message": "song not found"}, 404
+
+
+@app.route('/song/<int:id>', methods=['DELETE'])
+def delete_song(id):
+    deleted = db.songs.delete_one({"id":id})
+    
+    if deleted.deleted_count == 1:    
+        return {}, 204
 
     return {"message": "song not found"}, 404
 
